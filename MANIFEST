@@ -1,0 +1,5 @@
+LICENSE.txt
+README.md
+requirements.txt
+setup.py
+ec2selector/__init__.py
