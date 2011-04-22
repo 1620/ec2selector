@@ -44,7 +44,7 @@ def get_packages():
 
 setup(
     name = "ec2selector",
-    version = "0.0.1",
+    version = "1.0.0",
     # requires => not used, see parse_requirements above
     install_requires = parse_requirements('requirements.txt'),
 	dependency_links = parse_dependency_links('requirements.txt'),
@@ -60,7 +60,7 @@ setup(
     keywords = ["amazon", "ec2", "ami", "cloud", "boto", "red"],
     classifiers = [
         "Programming Language :: Python",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",        
         "Natural Language :: English",
         "Environment :: Console",
