@@ -28,7 +28,7 @@ class EC2SelectorTest (unittest.TestCase):
     
     def test_basic(self):
         '''Test select() returns anything at all by always picking option 0.'''
-        s = EC2Selector(lambda(prompt): '0')
+        s = EC2Selector(input_function=lambda(prompt): '0')
         assert s.select()
 
     def test_alestic_ubuntu(self):

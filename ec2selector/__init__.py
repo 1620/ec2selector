@@ -30,12 +30,16 @@ import boto.ec2
 
 class EC2Selector():
     
-    def __init__(self, input_function=None):
+    def __init__(self, access_key=None, secret_key=None, input_function=None):
         '''Accepts a prompt function that can be superseded by Test::Unit'''
         if input_function:
             self.prompt = input_function
         else:
             self.prompt = lambda(prompt): raw_input(prompt)
+        if access_key:
+            os.environ['AWS_ACCESS_KEY_ID'] = access_key
+        if secret_key:
+            os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
     
     def pick_an_option(self, choices):
         while True:
@@ -167,7 +171,7 @@ class EC2Selector():
                 "9a8bf') or type RETURN to interactively select from a list: ")
         if image_id:
             try:
-                image = connection.get_image(image_id)
+                return connection.get_image(image_id)
             except boto.exception.EC2ResponseError:
                 print('Image not found, switching to interactive selector.')
         # Load the available images, applying the specified filters
