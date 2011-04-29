@@ -28,10 +28,15 @@ import random
 import boto
 import boto.ec2
 
-class EC2Selector():
+
+class EC2Selector(object):
     
     def __init__(self, access_key=None, secret_key=None, input_function=None):
-        '''Accepts a prompt function that can be superseded by Test::Unit'''
+        '''Initializes an EC2Selector and optionally sets two environment
+        variables for the Amazon AWS access and secret keys.
+        Also accepts a prompt function that can be superseded by Test::Unit.
+        
+        '''
         if input_function:
             self.prompt = input_function
         else:
@@ -42,6 +47,7 @@ class EC2Selector():
             os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
     
     def pick_an_option(self, choices):
+        '''Presents a prompt to have the user pick one of the choices.'''
         while True:
             print('Please pick one of the available options:')
             for index, value in enumerate(choices):
@@ -55,14 +61,14 @@ class EC2Selector():
             except ValueError:
                 pass
     
-    def _list_images(self, connection, filters=None):
+    def _list_images(self, connection, filters={}):
         """
         Return a list of EC2 images available for the given connection that 
         pass the specified filters.
-    
+        
         :type connection: `EC2Connection`
         :param connection: The connection to get the list of images from
-    
+        
         :type filters: dict
         :param filters: Optional filters that can be used to limit the 
                         interactive search for an image. Filters are provided 
@@ -71,21 +77,23 @@ class EC2Selector():
                         allowable filter names is: ['name', 'owner_id', 
                         'virtualization_type', 'image_type', 'architecture', 
                         'name_contains', 'owner_id_contains', ...]
-    
+        
         :rtype: list
         :return: A list of :class:`boto.ec2.image.Image`
+        
         """
         # Extract _contains filters to apply on the returned filtered set
         contains_filters = {}
-        if filters:
-            for key in filters.keys():
-                contains_length = len('_contains')
-                if key[-contains_length:] == '_contains':
-                    contains_filters[key[:-contains_length]] = filters.pop(key)
+        for key in filters.keys():
+            contains_length = len('_contains')
+            if key[-contains_length:] == '_contains':
+                contains_filters[key[:-contains_length]] = filters.pop(key)
+        
         # Retrieve the filtered list, remove those with empty names
         images = connection.get_all_images(filters=filters)
         images = [i for i in images if i.name is not None]
         images = [i for i in images if i.state == 'available']
+        
         # Filter contains_name applying contains to 'name' attribute, and so on
         for key, value in contains_filters.iteritems():
             images = [i for i in images if getattr(i, key) \
@@ -93,15 +101,15 @@ class EC2Selector():
         return images
     
     def _filter_images(self, images):
-        """
-        Presents an interactive prompt to filter the list images based on their 
-        attributes and returns a list with the same or less items.
-    
+        """Presents an interactive prompt to filter the list images based on 
+        their attributes and returns a list with the same or less items.
+        
         :type images: list
         :param images: A list of :class:`boto.ec2.image.Image`
-    
+        
         :rtype: list
         :return: A list of :class:`boto.ec2.image.Image`
+        
         """
         attributes = ['name', 'owner_id', 'architecture', 'type', 
             'virtualization_type',]
@@ -111,9 +119,9 @@ class EC2Selector():
         value = values[self.pick_an_option(values)]
         return [i for i in images if getattr(i, attribute) == value]
     
-    def needs_authentication(f):
+    def needs_authentication(func):
         """Prompt user for AWS access and secret keys when not specified."""
-        @functools.wraps(f)
+        @functools.wraps(func)
         def auth_prompting_wrapper(*args, **kw):
             self = args[0]
             while not os.environ.get('AWS_ACCESS_KEY_ID'):
@@ -124,26 +132,25 @@ class EC2Selector():
                     "Enter your AWS secret access key: ")
             try:
                 boto.ec2.EC2Connection()
-                return f(*args, **kw)
+                return func(*args, **kw)
             except boto.exception.NoAuthHandlerFound:
                 print("Invalid AWS credentials. Try again.")
         return auth_prompting_wrapper
-
+    
     @needs_authentication
-    def select(self, region_id=None, image_id=None, ask=False, filters=None):
-        """
-        Return one available EC2 image, optionally presenting an interactive 
+    def select(self, region_id=None, image_id=None, ask=False, filters={}):
+        """Return one available EC2 image, optionally presenting an interactive 
         prompt to select one from the list of AMI available to your account.
-
+        
         :type region_id: string
         :param region_id: The ID of the region the wanted image belongs to
-
+        
         :type image_id: string
         :param image_id: The ID of the wanted images
-
+        
         :type ask: boolean
         :param ask: Should prompt for a specific image_id if not entered?
-
+        
         :type filters: dict
         :param filters: Optional filters that can be used to limit the 
                         interactive search for an image. Filters are provided 
@@ -152,9 +159,10 @@ class EC2Selector():
                         allowable filter names is: ['name', 'owner_id', 
                         'virtualization_type', 'image_type', 'architecture', 
                         'name_contains', 'owner_id_contains', ...]
-
+        
         :rtype: :class:`boto.ec2.image.Image`
-        :return: The selected EC2 Image or None if no image was selected    
+        :return: The selected EC2 Image or None if no image was selected
+        
         """
         # Pick a region
         all_regions = boto.ec2.regions()
@@ -165,6 +173,7 @@ class EC2Selector():
             region = all_regions[self.pick_an_option(
                 [r.name for r in all_regions])]
         connection = region.connect()
+        
         # Pick an image
         if ask and not image_id:
             image_id = self.prompt("Enter the ID of an image (e.g. 'ami-" +
@@ -174,6 +183,7 @@ class EC2Selector():
                 return connection.get_image(image_id)
             except boto.exception.EC2ResponseError:
                 print('Image not found, switching to interactive selector.')
+        
         # Load the available images, applying the specified filters
         print(("Loading list of available EC2 images for %s with filters: " +
             "%s, might take a while...") % (region.name, filters))
