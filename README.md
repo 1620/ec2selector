@@ -1,3 +1,6 @@
+Abandoned
+
+
 ec2selector is a tool to select an EC2 AMI (Amazon Machine Image) from those 
 available on Amazon.
 There are three basic ways in which you can use this tool.
